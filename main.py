@@ -1,30 +1,55 @@
 import tkinter as tk
 import util
 import cv2
-from PIL import Image,ImageTk
+import os
+import subprocess#is used to run external commands and interact with the OS.
+from PIL import Image,ImageTk# converting any formats(as in arrays,etc) into Image format;ImageTk=> used to convert PIL images into a format that Tkinter can display.
 
 class App:
     def __init__(self): #constructor
         self.main_window=tk.Tk() #creating out our main window using/in tkinter!
         self.main_window.geometry("1200x520+350+100") #Defining size of the window(1200x520) with x nd y values
 
-        self.login_button_main_window=util.get_button(self.main_window,'LOGIN',"green",self.login)#creating login button inside the window with text LOGIN in green color which fncts login
+        self.login_button_main_window=util.get_button(self.main_window,'LOGIN',"blue",self.login)#creating login button inside the window with text LOGIN in green color which fncts login
         self.login_button_main_window.place(x=750,y=300)#Place of the Login button in Window
 
         self.register_button_main_window=util.get_button(self.main_window,'REGISTER NEW USER',"grey",self.register,fg="black")#fg=>Foreground
         self.register_button_main_window.place(x=750,y=400)#Place of the Register button in Window
 
-        self.webcam_label=util.get_img_label(self.main_window)
+        self.webcam_label=util.get_img_label(self.main_window)# Create a label to display webcam footage
         self.webcam_label.place(x=10,y=0,width=700,height=400)
 
         self.add_cam(self.webcam_label) #adding our cam inside the label
+
+        #creating a db directory to store images.
+        self.db_dir='./db'
+
+        if not os.path.exists(self.db_dir): #If the directory doesnt exists then we r creating it
+            os.mkdir(self.db_dir)
 
 
     def start(self):
         self.main_window.mainloop()#inner loop to run our app each time we open the window.
 
     def login(self):
-        pass
+        unkown_img_path='./.tmp.jpg' #to exectute the next command,we'll be needing a temp image,but on later stage, we'll not req, so we delete it
+        
+         # Capture the current frame as an image file for face recognition processing
+        cv2.imwrite(unkown_img_path,self.recent_capture_arr)
+        
+        # Run face recognition to match the temporary image with the database,
+        output=str(subprocess.check_output(['face_recognition',self.db_dir, unkown_img_path]))
+        name=output.split(',')[1][:-5]# Extract the user's name from the recognition output
+
+        if name in ['unknown_person','no_persons_found']:
+            util.msg_box('OOPS!','Unknown User. Please register or try again')
+            
+        else:
+            util.msg_box('WELCOME BACK!!','Welcome,{}'.format(name))
+            
+
+
+        os.remove(unkown_img_path)
 
     def register(self):
         self.register_window=tk.Toplevel(self.main_window)#creating the register window on clicking register button frm the main window
@@ -57,7 +82,17 @@ class App:
 
 
     def accept(self):
-        pass
+        name=self.entering_text_for_new_user.get(1.0,"end-1c")#retrieves the text Entered by user in TEXT widget in Tkinter
+    # where 1.0: This specifies the starting position from which to read the text. In Tkinter, text widgets are indexed by line and character position, where 1.0 refers to the first line, first character. 
+    # "end-1c": This specifies the end position, but "end-1c" means "up to the end, minus one character." In Tkinter, end includes a trailing newline, so "end-1c" removes this extra newline and gives you just the actual text entered by the user.
+
+        cv2.imwrite(os.path.join(self.db_dir,'{}.jpg'.format(name)),self.register_new_user_capture)
+        #os.path.join constructs a file path by joining self.db_dir(dir where we have saved the Image) with filename.
+        #'{}.jpg'.format(name) creates a string for the filename, where {} is replaced by the value of 'name'.eg=>Dhanush.jpg
+
+        util.msg_box('SUCCESSFUL!','User Was Registered Successfully!')
+
+        self.register_window.destroy()
 
     def try_again(self):
         self.register_window.destroy()#this fnct destroys the register window nd takes back to the main window.
